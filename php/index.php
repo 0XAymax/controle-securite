@@ -7,12 +7,46 @@ $error = "";
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $username = $_POST['username'];
     $password = $_POST['password'];
+    
+    // Vérification reCAPTCHA
+    $recaptcha_secret = '6LefKEUsAAAAANyJWBaW1tqt3yaTDOUdX1ZhD6hT';
+    $recaptcha_response = $_POST['g-recaptcha-response'] ?? '';
+    
+    if (empty($recaptcha_response)) {
+        $error = "Veuillez cocher la case reCAPTCHA.";
+    } else {
+        // Vérifier le reCAPTCHA auprès de Google
+        $recaptcha_url = 'https://www.google.com/recaptcha/api/siteverify';
+        $recaptcha_data = [
+            'secret' => $recaptcha_secret,
+            'response' => $recaptcha_response,
+            'remoteip' => $_SERVER['REMOTE_ADDR']
+        ];
+        
+        $recaptcha_options = [
+            'http' => [
+                'header' => "Content-type: application/x-www-form-urlencoded\r\n",
+                'method' => 'POST',
+                'content' => http_build_query($recaptcha_data)
+            ]
+        ];
+        
+        $recaptcha_context = stream_context_create($recaptcha_options);
+        $recaptcha_result = file_get_contents($recaptcha_url, false, $recaptcha_context);
+        $recaptcha_json = json_decode($recaptcha_result);
+        
+        if (!$recaptcha_json->success) {
+            $error = "Échec de la validation reCAPTCHA. Veuillez réessayer.";
+        }
+    }
+    
+    // Si reCAPTCHA est valide, continuer avec l'authentification
+    if (empty($error)) {
+        // 1. CORRIGÉ : SHA1 est obsolète et vulnérable aux collisions/dictionnaires
+        $hashed_password = sha1($password);
 
-    // 1. CORRIGÉ : SHA1 est obsolète et vulnérable aux collisions/dictionnaires
-    $hashed_password = sha1($password);
-
-    try {
-        // Vérifier si l'utilisateur existe d'abord
+        try {
+            // Vérifier si l'utilisateur existe d'abord
         $sql = "SELECT * FROM users WHERE username = :username";
         $stmt = $pdo->prepare($sql);
         $stmt->bindParam(':username', $username, PDO::PARAM_STR);
@@ -91,10 +125,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             // 4. Message d'erreur générique pour ne pas révéler si l'utilisateur existe
             $error = "Identifiant ou mot de passe incorrect.";
         }
-    } catch (PDOException $e) {
-        // 5. CORRIGÉ : Pas d'affichage des détails de l'erreur SQL
-        error_log("Erreur SQL : " . $e->getMessage());
-        $error = "Une erreur s'est produite. Veuillez réessayer.";
+        } catch (PDOException $e) {
+            // 5. CORRIGÉ : Pas d'affichage des détails de l'erreur SQL
+            error_log("Erreur SQL : " . $e->getMessage());
+            $error = "Une erreur s'est produite. Veuillez réessayer.";
+        }
     }
 }
 ?>
@@ -104,12 +139,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 <head>
     <meta charset="UTF-8">
     <title>Connexion - Portail GI2</title>
+    <script src="https://www.google.com/recaptcha/api.js" async defer></script>
     <style>
         body { font-family: sans-serif; display: flex; justify-content: center; margin-top: 100px; background: #f4f4f4; }
         .login-box { background: white; padding: 20px; border-radius: 8px; box-shadow: 0 0 10px rgba(0,0,0,0.1); width: 300px; }
         input { width: 100%; padding: 10px; margin: 10px 0; box-sizing: border-box; }
         button { width: 100%; padding: 10px; background: #007bff; color: white; border: none; cursor: pointer; }
         .error { color: red; font-size: 0.9em; }
+        .g-recaptcha { margin: 10px 0; }
     </style>
 </head>
 <body>
@@ -126,6 +163,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             
             <label>Mot de passe :</label>
             <input type="password" name="password" required>
+            
+            <div class="g-recaptcha" data-sitekey="6LefKEUsAAAAACZ3apmTIuBOdR7GECGzliRGE7Ur"></div>
 
             <button type="submit">Se connecter</button>
         </form>
