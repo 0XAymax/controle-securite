@@ -8,6 +8,13 @@ if (!isset($_SESSION['user_id'])) {
     exit();
 }
 
+// Récupérer les infos utilisateur pour vérifier le statut MFA
+$user_sql = "SELECT mfa_enabled FROM users WHERE id = :id";
+$user_stmt = $pdo->prepare($user_sql);
+$user_stmt->bindParam(':id', $_SESSION['user_id'], PDO::PARAM_INT);
+$user_stmt->execute();
+$current_user = $user_stmt->fetch(PDO::FETCH_ASSOC);
+
 // CORRIGÉ : Récupération sécurisée des projets
 $query = "SELECT * FROM projets";
 $projets = $pdo->query($query)->fetchAll();
@@ -15,6 +22,16 @@ $projets = $pdo->query($query)->fetchAll();
 
 <h1>Bienvenue, <?php echo htmlspecialchars($_SESSION['username'], ENT_QUOTES, 'UTF-8'); ?> !</h1>
 <p>Votre rôle : <?php echo htmlspecialchars($_SESSION['role'], ENT_QUOTES, 'UTF-8'); ?></p>
+
+<?php if ($current_user['mfa_enabled']): ?>
+    <p style="color: green;">🔐 Authentification à deux facteurs activée</p>
+<?php else: ?>
+    <p style="color: orange;">⚠️ Authentification à deux facteurs désactivée - <a href="mfa_setup.php">Activer maintenant</a></p>
+<?php endif; ?>
+
+<p>
+    <a href="mfa_setup.php">⚙️ Gérer l'authentification à deux facteurs</a>
+</p>
 
 <hr>
 <h2>Liste des Projets du Système</h2>

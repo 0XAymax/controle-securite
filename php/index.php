@@ -84,15 +84,23 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     $reset_stmt->bindParam(':id', $user['id'], PDO::PARAM_INT);
                     $reset_stmt->execute();
                     
-                    // 3. CORRIGÉ : Régénération de l'ID de session pour prévenir la fixation de session
-                    session_regenerate_id(true);
-                    $_SESSION['user_id'] = $user['id'];
-                    $_SESSION['username'] = $user['username'];
-                    $_SESSION['role'] = $user['role'];
+                    // Vérifier si MFA est activé
+                    if ($user['mfa_enabled'] && !empty($user['mfa_secret'])) {
+                        // Rediriger vers la page de vérification MFA
+                        $_SESSION['pending_mfa_user_id'] = $user['id'];
+                        header('Location: mfa_verify.php');
+                        exit();
+                    } else {
+                        // Pas de MFA - Connexion complète
+                        session_regenerate_id(true);
+                        $_SESSION['user_id'] = $user['id'];
+                        $_SESSION['username'] = $user['username'];
+                        $_SESSION['role'] = $user['role'];
 
-                    // Redirection vers le dashboard
-                    header('Location: dashboard.php');
-                    exit();
+                        // Redirection vers le dashboard
+                        header('Location: dashboard.php');
+                        exit();
+                    }
                 } else {
                     // Mot de passe incorrect - Incrémenter les tentatives échouées
                     $failed_attempts = $user['failed_attempts'] + 1;

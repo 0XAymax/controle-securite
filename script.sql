@@ -10,6 +10,8 @@ CREATE TABLE users (
     role VARCHAR(10) NOT NULL,
     failed_attempts INT DEFAULT 0,
     lockout_until DATETIME NULL,
+    mfa_secret VARCHAR(255) NULL,
+    mfa_enabled TINYINT(1) DEFAULT 0,
     UNIQUE KEY unique_username (username)
 );
 
