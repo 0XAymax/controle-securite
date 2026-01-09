@@ -1,0 +1,4 @@
+host = 'db'; 
+user = 'root'; // ERREUR : Usage de root
+pass = '';     // ERREUR : Pas de mot de passe
+dbname = 'gi2_securite';

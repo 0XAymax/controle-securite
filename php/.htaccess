@@ -1,0 +1,10 @@
+# php/.htaccess
+
+# FAILLE : Permet de voir la liste des fichiers si index.php n'est pas appelé
+Options +Indexes
+
+# FAILLE : Autorise la lecture des fichiers de configuration et zip par n'importe qui
+<FilesMatch "\.(php|txt|zip|sql)$">
+    Order allow,deny
+    Allow from all
+</FilesMatch>
